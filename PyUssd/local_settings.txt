@@ -1,0 +1,7 @@
+DATABASE = {
+        'NAME': 'dbname',
+        'USER':'dbuser',
+        'PASSWORD':'dbpassword',
+        'HOST':'localhost',
+        'PORT':3306
+}

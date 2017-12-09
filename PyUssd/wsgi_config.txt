@@ -1,0 +1,37 @@
+#Settings for config deployment for gunicorn 
+#REf http://docs.gunicorn.org/en/latest/settings.html
+
+import os
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+#SERVER
+bind = '127.0.0.1:9000'
+backlog=2048 #maximum number of clients that can be waiting to be served (64 - 2048)
+
+#WORKERS
+#workers = 3 #default is 1
+#worker_class ='gevent' #default is sync
+#worker_connections = 1000 #max of simultaneous ccoonections. Only for Gevent or Eventlet
+#timeout=45 #default is 30 .wait time for workers to communicte they are live
+#keepalive=2 
+
+#DEBUGGING
+reload=True #Restart workers when code changes. For live set to False.
+
+
+#LOGGING
+accesslog=os.path.join(BASE_DIR,'logs/access.log') # default is None (for no logging)
+access_log_format='%(h)s %(u)s %(t)s "%(r)s" %(U)s %(s)s  %(b)s "%(f)s"  %(D)s '
+#errorlog = os.path.join(BASE_DIR,'logs/error.log') #default - which means log to stderr
+loglevel='debug' #defualt is info
+#capture_output=True #redirect stdout/stderr to Error log. Default is False
+
+#PROCESS NAMES
+proc_name = 'rest' #default is None
+
+#OTHERS
+chdir=BASE_DIR #change dir before loading apps
+forwarded_allow_ips="127.0.0.1" #set to * to disable checking IPs.
+pythonpath=None #Default is None. List od dirs to add to Python Path e.g '/home/djangoprojects/myproject,/home/python/mylibrary'
+
