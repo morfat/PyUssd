@@ -21,15 +21,12 @@ def display_response(response,choice_error_message=None):
 
 
 def make_http_request(url,params,session):
-    response_data_list=session.get('response_data_list')
+    response_data_list=None
     request=requests.get(url=url,params=params) #call external
-    response={"menus":[{"id":"1","label":"Jacpot Bets","url":"http://127.0.0.1:9000/ussd/jackpot"},
-                           {"id":"2","label":"Football","url":"http://127.0.0.1:9000/ussd/football"},
-                           {"id":"3","label":"Other Sports","url":"http://127.0.0.1:9000/ussd/other-sports"}
-                          ],
-                            "message":"CON Welcome to Dafabet"
-            }
+   
+    response=request.json()
     if session:
+        response_data_list=session.get('response_data_list')
         response_data_list.append(response)
         session.update({"session_id":params.get('session_id'),"response_data_list":response_data_list})
     else:
