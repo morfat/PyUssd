@@ -11,6 +11,34 @@ Run:  gunicorn -c PyUssd/config_gunicorn.py PyUssd.wsgi:application
   1. If menu id is 0, it is treated as prompt and its id is not displayed.
   2. As  for messages, always reply with CON or END.
 
+#Main POST request stucture:
+
+{'operator_session_id':session_id,
+'msisdn':"254700872844",
+'choice':"1",
+"info":{}, //from client
+"client_session":{}, //from client
+}
+
+#Main response structure:
+// info holds any menut item related information you may need,
+//client_session holds any session information you need
+
+
+{"menus":[{"id":"1","label":"Manchester Vs Arsenal","info":{}},
+                           {"id":"2","label":"Chelsea Vs Magma","info":{}},
+                           {"id":"3","label":"Orlando Vs Kelio","info":{}},
+                           {"id":"4","label":"Victor vs Amado","info":{}},
+                           {"id":"5","label":"Kwano vs Kenya","info":{}},
+                          ],
+    "message":"CON Next 5 Games",
+    "client_session":{}, #put any session infor you want here
+    "url":"http://127.0.0.1:9000/football"
+}
+
+
+
+
 a). Normal 
 
      {"menus":[{"id":"1","label":"Jacpot Bets","url":"http://127.0.0.1:9000/ussd/jackpot"},
