@@ -35,9 +35,9 @@ c). Message:
 
 d). Confirmation example:
    
-   {"menus":[{"id":"0","label":"Are you sure to register ?","url":"http://127.0.0.1:9000/ussd/jackpot"},
+      {"menus":[{"id":"0","label":"Are you sure to register ?","url":"http://127.0.0.1:9000/ussd/jackpot"},
              {"id":"1","label":"Yes","url":"http://127.0.0.1:9000/ussd/football"},
              {"id":"2","label":"Cancel","url":"http://127.0.0.1:9000/ussd/other-sports"}
                 ],
       "message":"CON "
-    }
+      }

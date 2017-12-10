@@ -48,10 +48,6 @@ class UssdResource:
         ussd_choice=None
         endpoint_url=self.service_endpoint
 
-
-        print (self.service_session_key,msisdn,session_id,ussd_string,endpoint_url)
-        
-
         if ussd_string:
             ussd_choice_list=str(ussd_string).split('*')
         else:
@@ -67,11 +63,9 @@ class UssdResource:
         #get session info
         session=self.redis.get(self.service_session_key)
        
-
         #sample request to client API
         request_data={'session_id':session_id,'msisdn':msisdn,'choice':ussd_choice}
-        print (request_data)
-
+    
         #sample response from client API
         
         display=None
