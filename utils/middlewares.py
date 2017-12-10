@@ -16,7 +16,10 @@ class USSDMiddleWare:
     
     def process_request(self,req,resp):
         #default params are msisdn,service_code,session_id,ussd_string
-        self.service_session_key=str(self.service_code)+str(self.service_sub_code)+req.params.get('msisdn')
+        if self.service_sub_code:
+            self.service_session_key=self.service_code+self.service_sub_code+req.params.get('msisdn')
+        else:
+            self.service_session_key=self.service_code+req.params.get('msisdn')
 
     def process_resource(self,req,resp,resource,params):
         resource.redis=self._redis

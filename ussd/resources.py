@@ -44,25 +44,33 @@ def make_http_request(url,params,session):
                 
 
 class UssdResource:
-    def on_get(self,req,resp):
-        msisdn=req.params.get('msisdn')
-        session_id=req.params.get('session_id')
-        ussd_string=req.params.get('ussd_string')
-        ussd_choice_list=None
-        ussd_choice=None
-        endpoint_url=self.service_endpoint
+    def get_ussd_input(self,operator_ussd_string):
+        ussd_input=None
+        if operator_ussd_string:
+            ussd_input_list=str(operator_ussd_string).split('*')
+            #if this ussd has subcode
+            if len(ussd_input_list)==1:
+                if not self.service_sub_code:
+                    ussd_input=ussd_input_list[0]
+            elif len(ussd_input_list)>1:
+                ussd_input=ussd_input_list[-1]
+        return ussd_input
 
-        if ussd_string:
-            ussd_choice_list=str(ussd_string).split('*')
-        else:
-            ussd_choice_list=[]
-
-        if len(ussd_choice_list)>1:
-            ussd_choice=ussd_choice_list[-1]
-        elif len(ussd_choice_list)==1:
-            if str(self.service_sub_code)!=ussd_choice_list[0]:
-                ussd_choice=ussd_choice_list[0]
         
+
+    def on_get(self,req,resp):
+        #we can access self.redis,self.service_endpoint,self.service_session_key,self.service_sub_code in this class
+
+        msisdn=req.params.get('msisdn')
+        operator_session_id=req.params.get('session_id')
+        #get input
+        ussd_input=self.get_ussd_input(req.params.get('ussd_string'))
+
+        print (ussd_input)
+
+
+                
+        """
 
         #get session info
         session=self.redis.get(self.service_session_key)
@@ -131,9 +139,10 @@ class UssdResource:
             #assign for display
             resp.body=display_response(response,response_data_len=0)
 
-            
+        """
+
         #update or se session
-        self.redis.set(self.service_session_key,pickle.dumps(p_session))
+        #self.redis.set(self.service_session_key,pickle.dumps(p_session))
         
     
        
