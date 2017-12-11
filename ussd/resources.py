@@ -3,49 +3,187 @@ import requests
 import pickle
 import operator
 
+import copy
 
-def display_response(response,choice_error_message=None,response_data_len=None):
-  
-
-    controls="\n00: Home \n0: Previous"
-    
-    display=response.get("message")
-    if choice_error_message:
-        display="CON "+choice_error_message
-    
-    for m in response.get('menus'):
-       
-
-        if m.get('id')=='0':
-            display+='\n'+"%s"%(m.get('label'))
-        else:
-            display+='\n'+"%s: %s"%(m.get('id'),m.get('label'))
-
-    if response_data_len==1:
-        display='\n'+display
-    else:
-        display='\n'+display+controls
-    return display
-
-
-def make_http_request(url,params,session):
-    response_data_list=None
-    request=requests.post(url=url,json=params) #call external
-    response=request.json()
-    
-    if session:
-        response_data_list=session.get('response_data_list')
-        response_data_list.append(response)
-        session.update({"session_id":params.get('session_id'),"response_data_list":response_data_list})
-    else:
-        response_data_list=[response]
-        session={"session_id":params.get('session_id'),"response_data_list":response_data_list}
-    return (session,response,)
-
-                
-
+            
 class UssdResource:
     MAX_SCREEN_CHARS=90-30 #Maximu screen dispplay in chars.. 30 chars   #for navigation of 97,98 and 99.
+
+
+    def get_display_screen(self,req,ussd_input,session):
+        #for when user enters 97,98 or 99
+
+        
+        
+        screen=''
+        b_n_h_controls='\n97: Back \n98: Next \n99: Home'
+        b_h_controls='\n97: Back \n99: Home'
+        n_controls='\n98: Next'
+
+
+        if (ussd_input=='99' or ussd_input is None) and session:
+            #this says go to home. check if at home or not.
+            response_data_list=session.get("response_data_list")
+            response_data=response_data_list[0]
+            screen=response_data.get("screen_1")
+            screens=response_data.get("screens")
+            if screens>1:
+                #we add navigation for next.
+                screen+=n_controls
+
+            response_data.update({"current_screen":1})
+
+            response_data_list=[response_data]
+            session.update({"response_data_list":response_data_list})
+
+        elif ussd_input=='98':
+            #this means navigational next
+            #get current screen
+            response_data_list=session.get("response_data_list")
+            response_data=response_data_list.pop()
+            screens=response_data.get("screens")
+            current_screen=response_data.get("current_screen")
+            if current_screen<screens:
+                current_screen=current_screen+1
+                screen=response_data.get("screen_%s"%(current_screen))
+                #check if this is last screen
+                if not current_screen==screens:
+                    screen+=b_n_h_controls
+                else:
+                    screen+=b_h_controls
+            
+            response_data.update({"current_screen":current_screen})
+            response_data_list.append(response_data)
+            session.update({"response_data_list":response_data_list})
+
+        elif ussd_input=='97':
+            #this means previous/back. it can be back in screens or back in whole menulist.
+            response_data_list=session.get("response_data_list")
+            response_data=response_data_list.pop()
+            screens=response_data.get("screens")
+            current_screen=response_data.get("current_screen")
+            if screens==1:
+                #this is normal , back. we move one step backwards.
+                #we pop another
+                response_data=response_data_list.pop()
+                screens=response_data.get("screens")
+                current_screen=response_data.get("current_screen")
+                screen=response_data.get("screen_1")
+
+                response_data.update({"current_screen":1})
+                if screens>1:
+                    #we add navigation for next.
+                    if len(response_data_list)==0:
+                        #this was homepage
+                        screen+=n_controls
+                        response_data_list=[response_data]
+                    else:
+                        screen+=b_n_h_controls
+                        response_data_list.append(response_data)
+                else:
+                    #this one has just one screen
+                    #chec if it is home page
+                    if len(response_data_list)>0:
+                        #not homegae. so we add back and home only
+                        screen+=b_h_controls
+                        response_data_list.append(response_data)
+                    else:
+                        response_data_list=[response_data]
+            else:
+                #we are in same paginated. just moving back one step.
+                current_screen=current_screen-1
+                if current_screen==0:
+                    #move to previous page
+                    current_screen=1
+                    response_data=response_data_list[-1]
+
+
+                response_data.update({"current_screen":current_screen})
+                screen=response_data.get("screen_%s"%(current_screen))
+                if current_screen==1:
+                    #we moved to initial. check if there is other menus back.
+                    if len(response_data_list)>1:
+                        screen+=b_n_h_controls
+                    else:
+                        screen+=n_controls
+                else:
+                    screen+=b_n_h_controls
+                response_data_list.append(response_data)
+
+            session.update({"response_data_list":response_data_list})
+
+        else:
+            session,screen=self.get_menu_display_screen(req,ussd_input,session)
+
+        return (session,screen,)
+
+    def get_menu_display_screen(self,req,ussd_input=None,session=None):
+        #default request data
+        request_data={'operator_session_id':req.params.get('session_id'),'msisdn':req.params.get('msisdn'),
+                      'ussd_input':ussd_input,
+                      "info":{}, #this is as from client. we return as per request
+                      "client_session":{} #this is from  client session. we return as per request
+                      }
+
+        
+        screen=''
+        b_n_h_controls='\n97: Back \n98: Next \n99: Home'
+        b_h_controls='\n97: Back \n99: Home'
+        n_controls='\n98: Next'
+
+        if not session or not ussd_input:
+            #new request, lets call external API.
+            response_data=self.call_client_url(url=self.service_endpoint,data=request_data)
+
+            #paginate response to create sample 
+
+            paginated_data=self.paginate_client_response(response_data)
+            session={"operator_session_id":req.params.get('session_id'), "response_data_list":[paginated_data]}
+            #display
+            screens=paginated_data.get("screens")
+            screen=paginated_data.get("screen_1")
+            if screens>1:
+                screen+=n_controls
+        else:
+            #check if input is valid
+            response_data_list=session.get("response_data_list")
+            response_data=response_data_list[-1]
+            url=response_data.get("url")
+
+            screen=response_data.get("screen_1")
+           
+            menus=response_data.get("menus")
+            menu_d={}
+            for m in menus:
+                if m.get("choice")==ussd_input:
+                    menu_d=m
+                    break
+            
+            #check if menu found.
+            if menu_d:
+                #call external url on the given data
+                request_data.update({"client_session":response_data.get("client_session"),"info":menu_d.get("info")})
+                response_data=self.call_client_url(url=url,data=request_data)
+
+                #paginated
+
+                response_data=self.paginate_client_response(response_data)
+                response_data_list.append(response_data)
+                session.update({"response_data_list":response_data_list})
+                #generate displa
+                screens=response_data.get("screens")
+                screen=response_data.get("screen_1")
+                if screens>1:
+                    screen+=b_n_h_controls
+                else:
+                    screen+=b_h_controls
+
+            else:
+                #display invalid choice
+                screen="Invalid Choice !"+screen
+
+        return (session,screen,)
+            
 
     def call_client_url(self,url,data):
         response=requests.post(url=url,json=data)
@@ -64,7 +202,7 @@ class UssdResource:
                 ussd_input=ussd_input_list[-1]
         return ussd_input
 
-    def paginate_client_response(self,response_data,ussd_input):
+    def paginate_client_response(self,response_data):
         #@TODO implement ordering for response .. here before modifying
         menus=response_data.get("menus")
         menus.sort(key=operator.itemgetter("id")) #sort menus by id
@@ -74,9 +212,9 @@ class UssdResource:
         
 
         screens=1
-        new_response_data={"menus":response_data.get("menus"),"screens":1,"url":response_data.get("url"),
-                          "client_session":response_data.get("client_session"),"current_screen":1}
 
+        new_response_data=copy.deepcopy(response_data)
+        new_response_data.update({"screens":1,"current_screen":1})
 
         available_chars=self.MAX_SCREEN_CHARS-message_len
         
@@ -106,8 +244,7 @@ class UssdResource:
             
             new_response_data.update({"screen_%s"%(screens):screen,"screens":screens})
         
-        print (new_response_data)
-
+       
         return new_response_data
 
 
@@ -131,108 +268,23 @@ class UssdResource:
         #get input
         ussd_input=self.get_ussd_input(req.params.get('ussd_string'))
         #print (ussd_input)
-        
+
         #get session object
+        #session={"response_data_list":[]}
+
         session=self.redis.get(self.service_session_key)
-
-        #default request data
-        request_data={'operator_session_id':req.params.get('session_id'),'msisdn':req.params.get('msisdn'),
-                      'ussd_input':ussd_input,
-                      "info":{}, #this is as from client. we return as per request
-                      "client_session":{} #this is from  client session. we return as per request
-                      }
-
-        if not session:
-            #new request, lets call external API.
-            response_data=self.call_client_url(url=self.service_endpoint,data=request_data)
-
-            #paginate response to create sample 
-
-            paginated_data=self.paginate_client_response(response_data,ussd_input)
-           
-
-            resp.media=paginated_data
-
-
-
-
-
-
-
-                
-        """
-
-        #get session info
-        session=self.redis.get(self.service_session_key)
-       
-        #sample request to client API
-        request_data={'operator_session_id':session_id,
-                      'msisdn':msisdn,
-                      'choice':ussd_choice,
-                      "info":{},
-                      "client_session":{},
-                      }
-    
-        #sample response from client API
         
-        display=None
-
         if session:
-            p_session=pickle.loads(session)
-            choice=request_data.get('choice')
-            response_data_list=p_session.get('response_data_list')
-
-            if choice=='0':
-                #previous
-                response=response_data_list[-2] #get previous
-                response_data_list=response_data_list[:-1]
-                p_session.update({"session_id":session_id,"response_data_list":response_data_list})
-                resp.body=display_response(response,response_data_len=len(response_data_list))
-            elif choice=='00':
-                response=response_data_list[0] #get initial display
-                response_data_list=[response]
-                p_session.update({"session_id":session_id,"response_data_list":response_data_list})
-                resp.body=display_response(response,response_data_len=len(response_data_list))
-            else:
-                #print (response_data_list)
-
-                prev_response=response_data_list[-1] #get last element. do not use pop here
-                #get the link
-                #print (prev_response)
-
-                prev_menus=prev_response.get("menus")
-
-                menu_d=None
-            
-                for menu in prev_menus:
-                    print (choice,menu.get('id'))
-                    if choice==menu.get('id'):
-                        #call external with this
-                        menu_d=menu
-                        break
-                
-                #call if available
-                if not menu_d:
-                    #no choice made
-                    resp.body=display_response(prev_response,choice_error_message="Incorrect Input")
-                else:
-                    url=prev_response.get("url",endpoint_url)
-                    client_session=prev_response.get('client_session')
-                    info=menu_d.get("info")
-                    request_data.update({"info":info,"client_session":client_session})
-
-                    p_session,response=make_http_request(url,request_data,p_session)
-                    resp.body=display_response(response)
+            session_p=pickle.loads(session)
         else:
-            url=endpoint_url
-            p_session,response=make_http_request(url,request_data,None)
-            #assign for display
-            resp.body=display_response(response,response_data_len=0)
+            session_p=None
 
-        """
+        session_d,screen=self.get_display_screen(req,ussd_input,session_p)
 
-        #update or se session
-        #self.redis.set(self.service_session_key,pickle.dumps(p_session))
+        #update session
+        self.redis.set(self.service_session_key,pickle.dumps(session_d))
+
+        resp.body=screen
         
     
        
