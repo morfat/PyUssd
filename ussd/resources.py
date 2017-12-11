@@ -250,8 +250,19 @@ class UssdResource:
 
 
     def on_get(self,req,resp):
-        """ Sample Required Response from client : 
-          #id is needed for ordering. display is made in order of id ASC.
+
+        """
+        Sample Request to client:
+
+          {'operator_session_id':"123455",'msisdn':"254700",
+                      'ussd_input':"2",
+                      "info":{}, #this is as from client. we return as per request
+                      "client_session":{} #this is from  client session. we return as per request
+          }
+        
+        
+         Sample Required Response from client : 
+        #id is needed for ordering. display is made in order of id ASC.
 
                     {"menus":[{"id":1,choice":"1","name":"Manchester Vs Arsenal","info":{"game_id":"12345"}},
                               {"id":2,choice":"2","name":"Chelsea Vs Magma","info":{}},

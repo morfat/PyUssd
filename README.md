@@ -11,61 +11,28 @@ Run:  gunicorn -c PyUssd/config_gunicorn.py PyUssd.wsgi:application
   1. If menu id is 0, it is treated as prompt and its id is not displayed.
   2. As  for messages, always reply with CON or END.
 
-#Main POST request stucture:
 
-{'operator_session_id':session_id,
-'msisdn':"254700872844",
-'choice':"1",
-"info":{}, //from client
-"client_session":{}, //from client
-}
+#Request and Reponse
 
-#Main response structure:
-// info holds any menut item related information you may need,
-//client_session holds any session information you need
+1.Sample Request to client:
 
+  {'operator_session_id':"123455",'msisdn':"254700",
+                      'ussd_input':"2",
+                      "info":{}, #this is as from client. we return as per request
+                      "client_session":{} #this is from  client session. we return as per request
+  }
 
-{"menus":[{"id":"1","label":"Manchester Vs Arsenal","info":{}},
-                           {"id":"2","label":"Chelsea Vs Magma","info":{}},
-                           {"id":"3","label":"Orlando Vs Kelio","info":{}},
-                           {"id":"4","label":"Victor vs Amado","info":{}},
-                           {"id":"5","label":"Kwano vs Kenya","info":{}},
-                          ],
-    "message":"CON Next 5 Games",
-    "client_session":{}, #put any session infor you want here
-    "url":"http://127.0.0.1:9000/football"
-}
+        
+        
+2. Sample Required Response from client : 
+  . id is needed for ordering. display is made in order of id ASC.
 
+  {"menus":[{"id":1,choice":"1","name":"Manchester Vs Arsenal","info":{"game_id":"12345"}},
+                              {"id":2,choice":"2","name":"Chelsea Vs Magma","info":{}},
+                              {"id":3,choice":"3","name":"Orlando Vs Kelio","info":{}},
+                             ],
+                    "message":"CON Next 5 Games",
+                    "client_session":{},
+                    "url":"http://127.0.0.1:9000/footballFixture"
+  }
 
-
-
-a). Normal 
-
-     {"menus":[{"id":"1","label":"Jacpot Bets","url":"http://127.0.0.1:9000/ussd/jackpot"},
-                {"id":"2","label":"Football","url":"http://127.0.0.1:9000/ussd/football"},
-                {"id":"3","label":"Other Sports","url":"http://127.0.0.1:9000/ussd/other-sports"}
-                ],
-      "message":"CON Welcome to Betting"
-     }
-
-b). Prompt
-    
-    {"menus":[{"id":"0","label":"Enter First Name","url":"http://127.0.0.1:9000/ussd/jackpot"},
-                ],
-      "message":"CON "
-    }
-
-c). Message:
-
-     {"menus":[],
-      "message":"END Thank you for registering"
-     }
-
-d). Confirmation example:
-   
-      {"menus":[{"id":"0","label":"Are you sure to register ?","url":"http://127.0.0.1:9000/ussd/jackpot"},
-             {"id":"1","label":"Yes","url":"http://127.0.0.1:9000/ussd/football"},
-             {"id":"2","label":"Cancel","url":"http://127.0.0.1:9000/ussd/other-sports"}
-                ],
-      "message":"CON "
-      }
